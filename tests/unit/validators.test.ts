@@ -54,28 +54,28 @@ describe('Chart Validators', () => {
 
       it('should handle leap year date', () => {
         const input = {
-          startDate: '2024-02-29',
-          endDate: '2024-03-01',
+          startDate: '2024-02-29T00:00:00Z',
+          endDate: '2024-03-01T00:00:00Z',
         };
 
         const result = dateFilterSchema.parse(input);
 
-        expect(result.startDate.getFullYear()).toBe(2024);
-        expect(result.startDate.getMonth()).toBe(1);
-        expect(result.startDate.getDate()).toBe(29);
+        expect(result.startDate.getUTCFullYear()).toBe(2024);
+        expect(result.startDate.getUTCMonth()).toBe(1);
+        expect(result.startDate.getUTCDate()).toBe(29);
       });
 
       it('should handle year boundary dates', () => {
         const input = {
-          startDate: '2024-01-01',
-          endDate: '2024-12-31',
+          startDate: '2024-01-01T00:00:00Z',
+          endDate: '2024-12-31T23:59:59Z',
         };
 
         const result = dateFilterSchema.parse(input);
 
-        expect(result.startDate.getDate()).toBe(1);
-        expect(result.endDate.getMonth()).toBe(11);
-        expect(result.endDate.getDate()).toBe(31);
+        expect(result.startDate.getUTCDate()).toBe(1);
+        expect(result.endDate.getUTCMonth()).toBe(11);
+        expect(result.endDate.getUTCDate()).toBe(31);
       });
     });
 
@@ -278,16 +278,16 @@ describe('Chart Validators', () => {
 
       it('should transform dates correctly', () => {
         const input = {
-          startDate: '2024-03-15',
-          endDate: '2024-06-20',
+          startDate: '2024-03-15T00:00:00Z',
+          endDate: '2024-06-20T00:00:00Z',
           groupBy: 'category',
         };
 
         const result = chartQuerySchema.parse(input);
 
-        expect(result.startDate.getFullYear()).toBe(2024);
-        expect(result.startDate.getMonth()).toBe(2);
-        expect(result.startDate.getDate()).toBe(15);
+        expect(result.startDate.getUTCFullYear()).toBe(2024);
+        expect(result.startDate.getUTCMonth()).toBe(2);
+        expect(result.startDate.getUTCDate()).toBe(15);
       });
     });
 
@@ -422,12 +422,12 @@ describe('Chart Validators', () => {
 
       it('should handle dates at year boundary', () => {
         const input = {
-          startDate: '2024-01-01',
-          endDate: '2024-12-31',
-          groupBy: 'month',
+          startDate: '2024-01-01T00:00:00Z',
+          endDate: '2024-12-31T23:59:59Z',
+          groupBy: 'invalid',
         };
 
-        // Should fail because 'month' is not in the enum
+        // Should fail because 'invalid' is not in the enum
         expect(() => chartQuerySchema.parse(input)).toThrow(ZodError);
       });
     });

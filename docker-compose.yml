@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    container_name: dashboard-api
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=mysql://root:rootpassword@db:3306/dashboard_db
+      - PORT=3000
+      - NODE_ENV=development
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - .:/usr/app
+      - /usr/app/node_modules
+    command: sh -c "npm run prisma:migrate && npm run dev"
+
+  db:
+    image: mysql:8
+    container_name: dashboard-db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: dashboard_db
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  mysql_data:

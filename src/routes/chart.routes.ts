@@ -40,9 +40,6 @@ const router = Router();
  *       500:
  *         $ref: '#/components/responses/InternalServerError'
  */
-router.get('/:chartType', validateDateFilter, (req, res) =>
-  chartController.getChartByType(req, res)
-);
 
 /**
  * @openapi
@@ -279,6 +276,46 @@ router.get('/bar', validateDateFilter, (req, res) =>
  */
 router.get('/summary', validateDateFilter, (req, res) =>
   chartController.getDashboardSummary(req, res)
+);
+
+/**
+ * @openapi
+ * /api/charts/{chartType}:
+ *   get:
+ *     summary: Get chart data by type
+ *     description: Get chart data by type (pie, line, bar, summary, trend) with date filtering and optional grouping
+ *     tags: [Charts]
+ *     parameters:
+ *       - name: chartType
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *           enum: [pie, line, bar, summary, trend]
+ *         description: Type of chart to retrieve
+ *       - $ref: '#/components/parameters/startDateParam'
+ *       - $ref: '#/components/parameters/endDateParam'
+ *       - name: groupBy
+ *         in: query
+ *         required: false
+ *         schema:
+ *           type: string
+ *           enum: [category, product, date, week, month]
+ *         description: Field to group results by (depends on chart type)
+ *     responses:
+ *       200:
+ *         description: Successful response with chart data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SuccessResponse'
+ *       400:
+ *         $ref: '#/components/responses/BadRequestError'
+ *       500:
+ *         $ref: '#/components/responses/InternalServerError'
+ */
+router.get('/:chartType', validateDateFilter, (req, res) =>
+  chartController.getChartByType(req, res)
 );
 
 export default router;

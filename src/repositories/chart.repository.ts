@@ -1,5 +1,5 @@
 import prisma from '../config/database';
-import { DateFilter } from '../validators/chart.validator';
+import type { DateFilter, ChartQuery } from '../validators/chart.validator';
 
 export interface PieChartData {
   label: string;
@@ -25,17 +25,30 @@ export interface DashboardSummary {
 }
 
 interface SaleRecord {
-  [key: string]: any;
   amount: number;
-  quantity: number;
-  createdAt: Date;
+  quantity?: number;
+  createdAt?: Date;
   category?: string;
   product?: string;
 }
 
 export class ChartRepository {
-  async getPieChartData(filter: DateFilter, groupBy?: string): Promise<PieChartData[]> {
-    const groupField = groupBy || 'category';
+  private getISOWeek(date: Date): { year: number; week: number } {
+    const tmp = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    const dayNum = tmp.getUTCDay() || 7; // Monday=1, Sunday=7
+    tmp.setUTCDate(tmp.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(tmp.getUTCFullYear(), 0, 1));
+    const week = Math.ceil((((tmp.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+    return { year: tmp.getUTCFullYear(), week };
+  }
+
+  async getPieChartData(filter: DateFilter, groupBy?: ChartQuery['groupBy']): Promise<PieChartData[]> {
+    const groupField = groupBy === 'product' ? 'product' : 'category';
+
+    const pieSelect = groupField === 'product'
+      ? { product: true, amount: true }
+      : { category: true, amount: true };
+
     const sales = await prisma.sale.findMany({
       where: {
         createdAt: {
@@ -43,23 +56,22 @@ export class ChartRepository {
           lte: filter.endDate,
         },
       },
-      select: {
-        [groupField]: true,
-        amount: true,
-      },
+      select: pieSelect,
     }) as SaleRecord[];
 
-    const grouped = sales.reduce((acc, sale) => {
-      const label = sale[groupField] as string;
+    const grouped = sales.reduce((acc: Record<string, number>, sale) => {
+      const label = (sale[groupField as 'category' | 'product'] ?? 'Unknown') as string;
       acc[label] = (acc[label] || 0) + sale.amount;
       return acc;
-    }, {} as Record<string, number>);
+    }, {});
 
     return Object.entries(grouped).map(([label, value]) => ({ label, value }));
   }
 
-  async getLineChartData(filter: DateFilter, groupBy?: string): Promise<LineChartData[]> {
-    const groupField = groupBy || 'date';
+  async getLineChartData(
+    filter: DateFilter,
+    groupBy?: ChartQuery['groupBy']
+  ): Promise<LineChartData[]> {
     const sales = await prisma.sale.findMany({
       where: {
         createdAt: {
@@ -77,33 +89,36 @@ export class ChartRepository {
       },
     }) as SaleRecord[];
 
-    const grouped = sales.reduce((acc: Record<string, number>, sale: SaleRecord) => {
+    const grouped = sales.reduce((acc: Record<string, number>, sale) => {
       let key: string;
 
-      if (groupBy === 'date') {
-        key = sale.createdAt.toISOString().split('T')[0];
+      if (!groupBy || groupBy === 'date') {
+        key = sale.createdAt!.toISOString().split('T')[0];
       } else if (groupBy === 'week') {
-        const date = sale.createdAt;
-        const startOfYear = new Date(date.getFullYear(), 0, 1);
-        const weekNumber = Math.ceil((((date.getTime() - startOfYear.getTime()) / 86400000) + startOfYear.getDay() + 1) / 7);
-        key = `Week ${weekNumber}`;
+        const { week } = this.getISOWeek(sale.createdAt!);
+        key = `Week ${week}`;
       } else if (groupBy === 'month') {
-        key = sale.createdAt.toISOString().slice(0, 7);
+        key = sale.createdAt!.toISOString().slice(0, 7);
       } else {
-        key = sale[groupBy as keyof typeof sale] as string || 'Unknown';
+        key = (sale[groupBy as 'category' | 'product'] ?? 'Unknown') as string;
       }
 
       acc[key] = (acc[key] || 0) + sale.amount;
       return acc;
-    }, {} as Record<string, number>);
+    }, {});
 
     return Object.entries(grouped)
       .map(([date, value]) => ({ date, value }))
       .sort((a, b) => a.date.localeCompare(b.date));
   }
 
-  async getBarChartData(filter: DateFilter, groupBy?: string): Promise<BarChartData[]> {
-    const groupField = groupBy || 'category';
+  async getBarChartData(filter: DateFilter, groupBy?: ChartQuery['groupBy']): Promise<BarChartData[]> {
+    const groupField = groupBy === 'product' ? 'product' : 'category';
+
+    const barSelect = groupField === 'product'
+      ? { product: true, amount: true, quantity: true }
+      : { category: true, amount: true, quantity: true };
+
     const sales = await prisma.sale.findMany({
       where: {
         createdAt: {
@@ -111,22 +126,18 @@ export class ChartRepository {
           lte: filter.endDate,
         },
       },
-      select: {
-        [groupField]: true,
-        amount: true,
-        quantity: true,
-      },
+      select: barSelect,
     }) as SaleRecord[];
 
-    const grouped = sales.reduce((acc: Record<string, { amount: number; quantity: number }>, sale: SaleRecord) => {
-      const label = sale[groupField] as string;
+    const grouped = sales.reduce((acc: Record<string, { amount: number; quantity: number }>, sale) => {
+      const label = (sale[groupField as 'category' | 'product'] ?? 'Unknown') as string;
       if (!acc[label]) {
         acc[label] = { amount: 0, quantity: 0 };
       }
       acc[label].amount += sale.amount;
-      acc[label].quantity += sale.quantity;
+      acc[label].quantity += sale.quantity!;
       return acc;
-    }, {} as Record<string, { amount: number; quantity: number }>);
+    }, {});
 
     return Object.entries(grouped).map(([label, data]) => ({ label, value: data.amount }));
   }
@@ -143,11 +154,11 @@ export class ChartRepository {
         amount: true,
         quantity: true,
       },
-    }) as SaleRecord[];
+    }) as Array<{ amount: number; quantity: number }>;
 
-    const totalRevenue = sales.reduce((sum: number, sale: SaleRecord) => sum + sale.amount, 0);
+    const totalRevenue = sales.reduce((sum, s) => sum + s.amount, 0);
     const totalOrders = sales.length;
-    const totalSales = sales.reduce((sum: number, sale: SaleRecord) => sum + sale.quantity, 0);
+    const totalSales = sales.reduce((sum, s) => sum + s.quantity, 0);
     const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
     return {

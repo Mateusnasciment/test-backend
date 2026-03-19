@@ -20,11 +20,10 @@ export class ChartController {
   async getChartByType(req: Request, res: Response): Promise<void> {
     try {
       const { chartType } = req.params;
-      const rawGroupBy = req.query.groupBy;
-      const groupBy = typeof rawGroupBy === 'string' ? rawGroupBy : undefined;
-      const filter = req.queryFilter!;
+      const filter = req.queryFilter;
+      const groupBy = req.queryGroupBy;
 
-      if (!filter.startDate || !filter.endDate) {
+      if (!filter || !filter.startDate || !filter.endDate) {
         res.status(400).json({
           success: false,
           error: 'startDate and endDate are required',
@@ -66,7 +65,16 @@ export class ChartController {
    */
   async getPieChart(req: Request, res: Response): Promise<void> {
     try {
-      const filter = req.queryFilter!;
+      const filter = req.queryFilter;
+
+      if (!filter || !filter.startDate || !filter.endDate) {
+        res.status(400).json({
+          success: false,
+          error: 'startDate and endDate are required',
+        });
+        return;
+      }
+
       const groupBy = req.queryGroupBy || 'category';
 
       const data = await chartService.getPieChartData(filter, groupBy);
@@ -103,7 +111,16 @@ export class ChartController {
    */
   async getLineChart(req: Request, res: Response): Promise<void> {
     try {
-      const filter = req.queryFilter!;
+      const filter = req.queryFilter;
+      
+      if (!filter || !filter.startDate || !filter.endDate) {
+        res.status(400).json({
+          success: false,
+          error: 'startDate and endDate are required',
+        });
+        return;
+      }
+      
       const groupBy = req.queryGroupBy || 'date';
 
       const data = await chartService.getLineChartData(filter, groupBy);
@@ -140,7 +157,16 @@ export class ChartController {
    */
   async getBarChart(req: Request, res: Response): Promise<void> {
     try {
-      const filter = req.queryFilter!;
+      const filter = req.queryFilter;
+      
+      if (!filter || !filter.startDate || !filter.endDate) {
+        res.status(400).json({
+          success: false,
+          error: 'startDate and endDate are required',
+        });
+        return;
+      }
+      
       const groupBy = req.queryGroupBy || 'category';
 
       const data = await chartService.getBarChartData(filter, groupBy);
@@ -177,7 +203,15 @@ export class ChartController {
    */
   async getDashboardSummary(req: Request, res: Response): Promise<void> {
     try {
-      const filter = req.queryFilter!;
+      const filter = req.queryFilter;
+      
+      if (!filter || !filter.startDate || !filter.endDate) {
+        res.status(400).json({
+          success: false,
+          error: 'startDate and endDate are required',
+        });
+        return;
+      }
 
       const data = await chartService.getDashboardSummary(filter);
 

@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { chartQuerySchema, DateFilter } from '../validators/chart.validator';
+import { chartQuerySchema, DateFilter, ChartQuery } from '../validators/chart.validator';
 
 export function validateDateFilter(
   req: Request,
@@ -43,7 +43,7 @@ declare global {
   namespace Express {
     interface Request {
       queryFilter?: DateFilter;
-      queryGroupBy?: string;
+      queryGroupBy?: ChartQuery['groupBy'];
     }
   }
 }

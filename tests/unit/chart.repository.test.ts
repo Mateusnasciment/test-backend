@@ -8,16 +8,23 @@ import prisma from '../../src/config/database';
 import { DateFilter } from '../../src/validators/chart.validator';
 
 // Mock Prisma
-jest.mock('../../src/config/database', () => ({
-  __esModule: true,
-  default: {
+jest.mock('../../src/config/database', () => {
+  const mockPrismaClient = {
     sale: {
       findMany: jest.fn(),
     },
-  },
-}));
+  };
+  return {
+    __esModule: true,
+    default: mockPrismaClient,
+  };
+});
 
-const mockPrisma = prisma as jest.Mocked<typeof prisma>;
+const mockPrisma = prisma as unknown as {
+  sale: {
+    findMany: jest.MockedFunction<typeof prisma.sale.findMany>;
+  };
+};
 
 describe('Chart Repository', () => {
   const mockFilter: DateFilter = {

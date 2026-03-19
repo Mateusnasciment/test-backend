@@ -4,18 +4,25 @@ import chartRepository, {
   BarChartData,
   DashboardSummary,
 } from '../repositories/chart.repository';
-import { DateFilter } from '../validators/chart.validator';
+import type { DateFilter, ChartQuery } from '../validators/chart.validator';
+
+type GroupBy = ChartQuery['groupBy'];
+const VALID_GROUP_BY = ['category', 'product', 'date', 'week', 'month'] as const;
+
+function isValidGroupBy(value: unknown): value is GroupBy {
+  return typeof value === 'string' && VALID_GROUP_BY.some((v) => v === value);
+}
 
 export class ChartService {
-  async getPieChartData(filter: DateFilter, groupBy?: string): Promise<PieChartData[]> {
+  async getPieChartData(filter: DateFilter, groupBy?: GroupBy): Promise<PieChartData[]> {
     return chartRepository.getPieChartData(filter, groupBy);
   }
 
-  async getLineChartData(filter: DateFilter, groupBy?: string): Promise<LineChartData[]> {
+  async getLineChartData(filter: DateFilter, groupBy?: GroupBy): Promise<LineChartData[]> {
     return chartRepository.getLineChartData(filter, groupBy);
   }
 
-  async getBarChartData(filter: DateFilter, groupBy?: string): Promise<BarChartData[]> {
+  async getBarChartData(filter: DateFilter, groupBy?: GroupBy): Promise<BarChartData[]> {
     return chartRepository.getBarChartData(filter, groupBy);
   }
 
@@ -28,15 +35,15 @@ export class ChartService {
     filter: DateFilter,
     groupBy?: unknown
   ): Promise<PieChartData[] | LineChartData[] | BarChartData[] | DashboardSummary> {
-    const groupByStr = typeof groupBy === 'string' ? groupBy : undefined;
-    
+    const validGroupBy = isValidGroupBy(groupBy) ? groupBy : undefined;
+
     switch (chartType.toLowerCase()) {
       case 'pie':
-        return this.getPieChartData(filter, groupByStr);
+        return this.getPieChartData(filter, validGroupBy);
       case 'line':
-        return this.getLineChartData(filter, groupByStr);
+        return this.getLineChartData(filter, validGroupBy);
       case 'bar':
-        return this.getBarChartData(filter, groupByStr);
+        return this.getBarChartData(filter, validGroupBy);
       case 'summary':
         return this.getDashboardSummary(filter);
       case 'trend':

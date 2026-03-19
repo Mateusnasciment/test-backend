@@ -1,23 +1,29 @@
 import request from 'supertest';
 import express from 'express';
-import chartRoutes from '../../src/routes/chart.routes';
-import { validateDateFilter } from '../../src/middlewares/dateFilter.middleware';
+
+// Mock the chart service BEFORE importing routes
+jest.mock('../../src/services/chart.service', () => ({
+  __esModule: true,
+  default: {
+    getPieChartData: jest.fn(),
+    getLineChartData: jest.fn(),
+    getBarChartData: jest.fn(),
+    getDashboardSummary: jest.fn(),
+    getChartDataByType: jest.fn(),
+  },
+}));
 
 // Create test app
 const app = express();
 app.use(express.json());
+
+// Import routes after express app is created
+import chartRoutes from '../../src/routes/chart.routes';
 app.use('/api/charts', chartRoutes);
 
-// Mock the chart service
-jest.mock('../../src/services/chart.service', () => ({
-  getPieChartData: jest.fn(),
-  getLineChartData: jest.fn(),
-  getBarChartData: jest.fn(),
-  getDashboardSummary: jest.fn(),
-  getChartDataByType: jest.fn(),
-}));
+import chartService from '../../src/services/chart.service';
 
-const chartService = require('../../src/services/chart.service').default;
+const mockChartService = chartService as jest.Mocked<typeof chartService>;
 
 describe('Chart API Integration Tests', () => {
   afterEach(() => {
@@ -30,7 +36,7 @@ describe('Chart API Integration Tests', () => {
         { label: 'Electronics', value: 5000 },
         { label: 'Clothing', value: 3000 },
       ];
-      chartService.getPieChartData.mockResolvedValue(mockData);
+      mockChartService.getPieChartData.mockResolvedValue(mockData);
 
       const response = await request(app)
         .get('/api/charts/pie')
@@ -72,14 +78,14 @@ describe('Chart API Integration Tests', () => {
 
     it('should accept groupBy parameter', async () => {
       const mockData = [{ label: 'Product1', value: 1000 }];
-      chartService.getPieChartData.mockResolvedValue(mockData);
+      mockChartService.getPieChartData.mockResolvedValue(mockData);
 
       const response = await request(app)
         .get('/api/charts/pie')
         .query({ startDate: '2024-01-01', endDate: '2024-12-31', groupBy: 'product' });
 
       expect(response.status).toBe(200);
-      expect(chartService.getPieChartData).toHaveBeenCalled();
+      expect(mockChartService.getPieChartData).toHaveBeenCalled();
     });
   });
 
@@ -89,7 +95,7 @@ describe('Chart API Integration Tests', () => {
         { date: '2024-01', value: 1000 },
         { date: '2024-02', value: 1500 },
       ];
-      chartService.getLineChartData.mockResolvedValue(mockData);
+      mockChartService.getLineChartData.mockResolvedValue(mockData);
 
       const response = await request(app)
         .get('/api/charts/line')
@@ -103,7 +109,7 @@ describe('Chart API Integration Tests', () => {
 
     it('should accept groupBy parameter for time grouping', async () => {
       const mockData = [{ date: '2024-W01', value: 1000 }];
-      chartService.getLineChartData.mockResolvedValue(mockData);
+      mockChartService.getLineChartData.mockResolvedValue(mockData);
 
       const response = await request(app)
         .get('/api/charts/line')
@@ -119,7 +125,7 @@ describe('Chart API Integration Tests', () => {
         { label: 'Electronics', value: 5000 },
         { label: 'Clothing', value: 3000 },
       ];
-      chartService.getBarChartData.mockResolvedValue(mockData);
+      mockChartService.getBarChartData.mockResolvedValue(mockData);
 
       const response = await request(app)
         .get('/api/charts/bar')
@@ -140,7 +146,7 @@ describe('Chart API Integration Tests', () => {
         averageOrderValue: 500,
         totalOrders: 100,
       };
-      chartService.getDashboardSummary.mockResolvedValue(mockSummary);
+      mockChartService.getDashboardSummary.mockResolvedValue(mockSummary);
 
       const response = await request(app)
         .get('/api/charts/summary')
@@ -156,23 +162,22 @@ describe('Chart API Integration Tests', () => {
   describe('GET /api/charts/:chartType', () => {
     it('should return data for dynamic chart type - pie', async () => {
       const mockData = [{ label: 'Category', value: 1000 }];
-      chartService.getChartDataByType.mockResolvedValue(mockData);
+      mockChartService.getPieChartData.mockResolvedValue(mockData);
 
       const response = await request(app)
         .get('/api/charts/pie')
         .query({ startDate: '2024-01-01', endDate: '2024-12-31' });
 
       expect(response.status).toBe(200);
-      expect(chartService.getChartDataByType).toHaveBeenCalledWith(
-        'pie',
+      expect(mockChartService.getPieChartData).toHaveBeenCalledWith(
         expect.any(Object),
-        undefined
+        'category'
       );
     });
 
     it('should return data for dynamic chart type - line', async () => {
       const mockData = [{ date: '2024-01', value: 1000 }];
-      chartService.getChartDataByType.mockResolvedValue(mockData);
+      mockChartService.getLineChartData.mockResolvedValue(mockData);
 
       const response = await request(app)
         .get('/api/charts/line')
@@ -183,7 +188,7 @@ describe('Chart API Integration Tests', () => {
 
     it('should return data for dynamic chart type - bar', async () => {
       const mockData = [{ label: 'Category', value: 1000 }];
-      chartService.getChartDataByType.mockResolvedValue(mockData);
+      mockChartService.getBarChartData.mockResolvedValue(mockData);
 
       const response = await request(app)
         .get('/api/charts/bar')
@@ -199,7 +204,7 @@ describe('Chart API Integration Tests', () => {
         averageOrderValue: 500,
         totalOrders: 100,
       };
-      chartService.getChartDataByType.mockResolvedValue(mockSummary);
+      mockChartService.getDashboardSummary.mockResolvedValue(mockSummary);
 
       const response = await request(app)
         .get('/api/charts/summary')
@@ -210,7 +215,7 @@ describe('Chart API Integration Tests', () => {
 
     it('should return data for dynamic chart type - trend', async () => {
       const mockData = [{ date: '2024-01', value: 1000 }];
-      chartService.getChartDataByType.mockResolvedValue(mockData);
+      mockChartService.getLineChartData.mockResolvedValue(mockData);
 
       const response = await request(app)
         .get('/api/charts/trend')
@@ -220,7 +225,7 @@ describe('Chart API Integration Tests', () => {
     });
 
     it('should return 400 for unsupported chart type', async () => {
-      chartService.getChartDataByType.mockRejectedValue(
+      mockChartService.getChartDataByType.mockRejectedValue(
         new Error('Unsupported chart type: unknown')
       );
 
