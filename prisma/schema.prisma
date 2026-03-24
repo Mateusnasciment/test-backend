@@ -11,8 +11,8 @@ datasource db {
 }
 
 model Sale {
-  id          Int      @id @default(autoincrement())
-  productId   Int
+  id          String   @id @default(uuid())
+  productId   String
   product     String
   category    String
   amount      Float
@@ -26,7 +26,7 @@ model Sale {
 }
 
 model User {
-  id        Int      @id @default(autoincrement())
+  id        String   @id @default(uuid())
   name      String
   email     String   @unique
   createdAt DateTime @default(now())

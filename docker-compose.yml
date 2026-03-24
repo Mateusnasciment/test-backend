@@ -2,7 +2,10 @@ version: '3.8'
 
 services:
   app:
-    build: .
+    build:
+      context: .
+      args:
+        - DATABASE_URL=mysql://root:rootpassword@db:3306/dashboard_db
     container_name: dashboard-api
     ports:
       - "3000:3000"
@@ -16,7 +19,23 @@ services:
     volumes:
       - .:/usr/app
       - /usr/app/node_modules
-    command: sh -c "npm run prisma:migrate && npm run dev"
+    command: sh -c "npx prisma migrate deploy && npm run dev"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: dashboard-frontend
+    ports:
+      - "5173:5173"
+    environment:
+      - NODE_ENV=development
+    volumes:
+      - ./frontend:/usr/app
+      - /usr/app/node_modules
+    depends_on:
+      - app
+    command: npm run dev
 
   db:
     image: mysql:8
@@ -25,6 +44,7 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: rootpassword
       MYSQL_DATABASE: dashboard_db
+      MYSQL_AUTHENTICATION_PLUGIN: mysql_native_password
     ports:
       - "3306:3306"
     volumes:

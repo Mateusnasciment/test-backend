@@ -2,6 +2,9 @@ FROM node:18-alpine
 
 WORKDIR /usr/app
 
+ARG DATABASE_URL
+ENV DATABASE_URL=${DATABASE_URL}
+
 COPY package*.json ./
 COPY prisma ./prisma/
 

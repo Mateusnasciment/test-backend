@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { randomUUID } from 'crypto';
 
 const prisma = new PrismaClient();
 
@@ -61,12 +62,13 @@ async function seed() {
   const now = new Date();
   const twelveMonthsAgo = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
 
-  let productId = 1;
+  const productIds = Array.from({ length: 100 }, () => randomUUID());
+  let productIndex = 0;
   for (let i = 0; i < 500; i++) {
     const category = categories[Math.floor(Math.random() * categories.length)];
     const categoryProducts = products[category];
     const product = categoryProducts[Math.floor(Math.random() * categoryProducts.length)];
-    
+
     // Generate random date within the past 12 months
     const randomDate = new Date(
       twelveMonthsAgo.getTime() + Math.random() * (now.getTime() - twelveMonthsAgo.getTime())
@@ -77,7 +79,7 @@ async function seed() {
     const amount = price * quantity;
 
     salesData.push({
-      productId: productId++,
+      productId: productIds[productIndex++],
       product,
       category,
       amount,
@@ -85,7 +87,7 @@ async function seed() {
       createdAt: randomDate,
     });
 
-    if (productId > 100) productId = 1;
+    if (productIndex >= 100) productIndex = 0;
   }
 
   // Create sales in batches
